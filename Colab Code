@@ -13,3 +13,110 @@ from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 from difflib import SequenceMatcher
 
+```
+# Load your data
+df = pd.read_csv('Faculty Entrada Queries.csv')
+
+# Load and remove whitespace
+df['Queries'] = df['Queries'].str.strip()
+
+# lowercasing result_sorted
+df['Queries'] = df['Queries'].str.lower()
+```
+# manual mapping of similar terms that combine_similar won't pick up
+# 0.9, no mapping = 151 rows
+# 0.9 + mapping = 147 rows - good!
+
+manual_mapping = {
+    'trauma informed':'trauma informed practice',
+    'neonat': 'neonatology',
+    'attention deficit':'attention deficit hyperactivity disorder',
+    'trauma-inform':'trauma informed practice',
+    'nortth':'north'
+}
+
+df['Queries'] = df['Queries'].map(manual_mapping).fillna(df['Queries'])
+
+# adjustments from threshold = 0.8
+# bc guidelines 13 guidelines 5 -> bc guidelines 18
+# time management 7 management 10 -> time management 17
+# trauma informed 22 trauma informed practice 14
+# attention deficit hyperactivity disorder 16 attention deficit 3
+# neonat 6 neonatology 6
+
+#potential groups
+  #rural+cbl rural
+  #sexual + sexual abuse
+  #cbl hypothalamic + hypothalamic
+
+```
+
+#combines similar queries
+
+def similarity_ratio(a, b):
+    if pd.isna(a) or pd.isna(b):
+        return 0
+    return SequenceMatcher(None, str(a).lower(), str(b).lower()).ratio()
+    # takes 2 strings, finds same letters/characters, length of characters that are the same
+    # return similarity score (DOUBLE) based on sizes of similar chunks
+
+def combine_similar(df, query_col='Queries', count_col='Event count', threshold=0.9):
+  # 0.9 = 151 rows, no mapping
+    combined = {}
+    for i, row in df.iterrows():
+        if pd.isna(row[query_col]):
+            continue
+        matched = False
+        for key in combined:
+            if similarity_ratio(row[query_col], key) >= threshold:
+              #if similar, combine the two and make 1 row
+                combined[key] += row[count_col]
+                matched = True
+                break
+        if not matched:
+            #if not matched make separate
+            combined[row[query_col]] = row[count_col]
+    return pd.DataFrame({query_col: combined.keys(), count_col: combined.values()})
+    # go thru rows of queries and compares to each other
+
+# Load your CSV file
+
+result = combine_similar(df)
+result_sorted = result.sort_values('Event count', ascending=False).reset_index(drop=True)
+pd.set_option('display.max_rows', 10)
+
+
+# Display all rows
+print(result_sorted)
+
+```
+
+#acronym dictionary, expands acronyms and applies them
+#acronym dictionary
+acronym_map = {
+    'adhd': 'attention deficit hyperactivity disorder',
+    'cbl': 'case based learning',
+    'ot': 'occupational therapy',
+    'carms': 'canadian resident matching service',
+    'nicu': 'neonatal intensive care unit',
+    'spf': 'summative portfolio form',
+    #'npm': 'northern medical program',
+    'qips': 'quality improvement and patient safety',
+    'wba': 'workplace based assessment',
+    'epa': 'entrustable professional activity'
+}
+
+# Function to expand acronyms
+def expand_acronyms(text):
+  #takes text, isolates it and replaces w longer version of word
+    words = text.split()
+    expanded_words = [acronym_map.get(word, word) for word in words]
+    return ' '.join(expanded_words)
+
+
+# Apply preprocessing
+result_sorted['Queries'] = result_sorted['Queries'].apply(expand_acronyms)
+
+pd.set_option('display.max_rows', None)
+
+print(result_sorted)
