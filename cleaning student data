@@ -1,0 +1,72 @@
+#imports
+!pip install fuzzywuzzy python-Levenshtein
+
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
+from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.metrics import silhouette_score
+import matplotlib.pyplot as plt
+import re
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
+from difflib import SequenceMatcher
+```
+
+#read data
+data = pd.read_csv('Student Entrada Queries.csv', header=9, nrows=10000)
+df = pd.DataFrame(data)
+
+pd.set_option('display.max_rows', 10)
+
+```
+
+# rename columns to Queries and Event Count (renames first event count column bc student data)
+df = df.rename(columns={'Page path + query string': 'Queries', 'Event count': 'Event Count'})
+
+```
+#drop NaN values in Queries column
+#1533 rows without dropna, 1532 with
+df.dropna(subset=['Queries'], inplace=True)
+```
+
+# make df only have 2 columns
+df = df[['Queries', 'Event Count']]
+
+# lowercasing result_sorted
+df['Queries'] = df['Queries'].str.lower()
+
+```
+
+#remove rows with event count of 0
+df = df[df['Event Count'] != 0]
+
+#1061 rows
+```
+
+# clean  text from queries column
+import re
+
+#replace + with spaces
+df['Queries'] = df['Queries'].str.replace('+', ' ')
+df['Queries'] = df['Queries'].str.replace('%22', '')
+
+# clean search results mostly
+def extract_search_term(query):
+  match = re.search(r"q=([^&]+)", query)  # Find 'q=' followed by characters until '&'
+  if match:
+    return match.group(1)  # Extract the captured search term
+  else:
+    return query  # Or handle cases with no match as needed
+
+df['Queries'] = df['Queries'].apply(extract_search_term)
+
+# sort by descending event count
+df = df.sort_values(by=['Event Count'], ascending=False)
+
+```
+
+#1061 rows x 2 columns
+pd.set_option('display.max_rows', 10)
+print(df)
