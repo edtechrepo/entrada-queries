@@ -62,6 +62,11 @@ def extract_search_term(query):
 
 df['Queries'] = df['Queries'].apply(extract_search_term)
 
+
+mask = df['Queries'].str.startswith('/curriculum')
+df.loc[mask, 'Queries'] = 'filters only'
+```
+
 # sort by descending event count
 df = df.sort_values(by=['Event Count'], ascending=False)
 
