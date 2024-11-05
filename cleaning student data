@@ -70,3 +70,61 @@ df = df.sort_values(by=['Event Count'], ascending=False)
 #1061 rows x 2 columns
 pd.set_option('display.max_rows', 10)
 print(df)
+
+```
+
+# manual mapping of similar terms that combine_similar won't pick up
+
+manual_mapping = {
+    'trauma informed':'trauma informed practice',
+    'neonat': 'neonatology',
+    'attention deficit':'attention deficit hyperactivity disorder',
+    'trauma-inform':'trauma informed practice',
+    'nortth':'north',
+    'shadow':'shadowing'
+}
+
+df['Queries'] = df['Queries'].map(manual_mapping).fillna(df['Queries'])
+
+```
+
+#combines similar queries
+
+def similarity_ratio(a, b):
+    if pd.isna(a) or pd.isna(b):
+        return 0
+    return SequenceMatcher(None, str(a).lower(), str(b).lower()).ratio()
+    # takes 2 strings, finds same letters/characters, length of characters that are the same
+    # return similarity score (DOUBLE) based on sizes of similar chunks
+
+def combine_similar(df, query_col='Queries', count_col='Event Count', threshold=0.9):
+  # 0.9 = 744 rows
+    combined = {}
+    for i, row in df.iterrows():
+        if pd.isna(row[query_col]):
+            continue
+        matched = False
+        for key in combined:
+            if similarity_ratio(row[query_col], key) >= threshold:
+              #if similar, combine the two and make 1 row
+                combined[key] += row[count_col]
+                matched = True
+                break
+        if not matched:
+            #if not matched make separate
+            combined[row[query_col]] = row[count_col]
+    return pd.DataFrame({query_col: combined.keys(), count_col: combined.values()})
+    # go thru rows of queries and compares to each other
+
+# Load your CSV file
+
+result = combine_similar(df)
+result_sorted = result.sort_values('Event Count', ascending=False).reset_index(drop=True)
+pd.set_option('display.max_rows', 10)
+
+
+# Display all rows
+print(result_sorted)
+#744 rows
+
+```
