@@ -130,6 +130,63 @@ pd.set_option('display.max_rows', 10)
 
 # Display all rows
 print(result_sorted)
-#744 rows
+#735 rows
 
 ```
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Sort the DataFrame by 'Event Count' in descending order and take the top 20
+top_20_df = result_sorted.sort_values(by=['Event Count'], ascending=False).head(10)
+
+# Create the bar plot using the top 20 DataFrame
+sns.barplot( x='Event Count', y='Queries', data=top_20_df, palette = 'rainbow') 
+
+
+#plt.xticks(rotation=90) # Rotate x-axis labels for better readability (optional)
+
+plt.show()
+
+plt.savefig('student_data.png')
+
+###################
+
+#acronym dictionary, expands acronyms and applies them
+#acronym dictionary
+acronym_map = {
+    'adhd': 'attention deficit hyperactivity disorder',
+    'cbl': 'case based learning',
+    'ot': 'occupational therapy',
+    'carms': 'canadian resident matching service',
+    'nicu': 'neonatal intensive care unit',
+    'spf': 'summative portfolio form',
+    #'npm': 'northern medical program',
+    'qips': 'quality improvement and patient safety',
+    'wba': 'workplace based assessment',
+    'epa': 'entrustable professional activity',
+    'osce': 'objective structured clinical examination'
+}
+
+# Function to expand acronyms
+def expand_acronyms(text):
+  #takes text, isolates it and replaces w longer version of word
+    words = text.split()
+    expanded_words = [acronym_map.get(word, word) for word in words]
+    return ' '.join(expanded_words)
+
+
+# Apply preprocessing
+result_sorted['Queries'] = result_sorted['Queries'].apply(expand_acronyms)
+
+pd.set_option('display.max_rows', 10)
+
+print(result_sorted)
+
+############################
+
+search_value = ["policy", "policies", ] # Replace with the specific value you're looking for
+result_row = result_sorted[result_sorted['Queries'].str.contains('|'.join(search_value), case=False, na=False)]
+
+display(result_row)
+
+
